@@ -179,7 +179,7 @@ class ClaudeEnvManager:
         
         # Update environment variables if provided
         if env_vars:
-            validate_environment_vars(env_vars)
+            validate_environment_vars(env_vars, partial=True)
             profile.update_env(env_vars)
         
         # Update description if provided
@@ -220,6 +220,10 @@ class ClaudeEnvManager:
             for key, value in settings.env.items():
                 if not key.startswith("ANTHROPIC_"):
                     new_env[key] = value
+            
+            # Set API_TIMEOUT_MS to 600000 if not specified in profile
+            if "API_TIMEOUT_MS" not in new_env:
+                new_env["API_TIMEOUT_MS"] = "600000"
             
             # Update settings
             settings.env = new_env

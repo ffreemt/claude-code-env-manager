@@ -3,7 +3,7 @@
 import os
 from pathlib import Path
 from typing import Optional, Dict, Any
-from .exceptions import ConfigurationError
+from ..exceptions import ConfigurationError
 
 
 def get_default_config_path() -> Path:

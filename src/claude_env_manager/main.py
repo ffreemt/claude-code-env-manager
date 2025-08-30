@@ -36,6 +36,9 @@ def main():
     except KeyboardInterrupt:
         click.echo("\nOperation cancelled by user.")
         sys.exit(1)
+    except ConfigurationError as e:
+        click.echo(f"Configuration error: {e}", err=True)
+        sys.exit(1)
     except Exception as e:
         click.echo(f"Unexpected error: {e}", err=True)
         sys.exit(1)

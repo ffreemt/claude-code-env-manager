@@ -3,7 +3,7 @@
 import shutil
 from pathlib import Path
 from typing import Optional
-from .exceptions import FileOperationError
+from ..exceptions import FileOperationError
 
 
 def safe_read_file(file_path: Path) -> Optional[str]:
