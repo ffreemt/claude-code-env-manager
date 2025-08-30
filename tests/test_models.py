@@ -88,6 +88,56 @@ class TestEnvironmentProfile:
                 env=env_vars
             )
 
+    def test_profile_any_base_url_accepted(self):
+        """Test that any valid base URL is accepted."""
+        env_vars = {
+            "ANTHROPIC_BASE_URL": "https://any-domain.com/api",
+            "ANTHROPIC_API_KEY": "sk-ant-api03-test",
+            "ANTHROPIC_MODEL": "claude-3-5-sonnet-20241022",
+            "ANTHROPIC_SMALL_FAST_MODEL": "claude-3-haiku-20240307"
+        }
+        
+        # This should not raise an error
+        profile = EnvironmentProfile(
+            name="test-profile",
+            env=env_vars
+        )
+        
+        assert profile.env["ANTHROPIC_BASE_URL"] == "https://any-domain.com/api"
+
+    def test_profile_any_model_name_accepted(self):
+        """Test that any model name format is accepted."""
+        env_vars = {
+            "ANTHROPIC_BASE_URL": "https://api.anthropic.com",
+            "ANTHROPIC_API_KEY": "sk-ant-api03-test",
+            "ANTHROPIC_MODEL": "zai-org/GLM-4.5",
+            "ANTHROPIC_SMALL_FAST_MODEL": "gpt-4"
+        }
+        
+        # This should not raise an error
+        profile = EnvironmentProfile(
+            name="test-profile",
+            env=env_vars
+        )
+        
+        assert profile.env["ANTHROPIC_MODEL"] == "zai-org/GLM-4.5"
+        assert profile.env["ANTHROPIC_SMALL_FAST_MODEL"] == "gpt-4"
+
+    def test_profile_invalid_model_name_format(self):
+        """Test profile with invalid model name format."""
+        env_vars = {
+            "ANTHROPIC_BASE_URL": "https://api.anthropic.com",
+            "ANTHROPIC_API_KEY": "sk-ant-api03-test",
+            "ANTHROPIC_MODEL": "invalid model@name",  # Contains invalid character @
+            "ANTHROPIC_SMALL_FAST_MODEL": "claude-3-haiku-20240307"
+        }
+        
+        with pytest.raises(ValueError, match="Invalid model name format"):
+            EnvironmentProfile(
+                name="test-profile",
+                env=env_vars
+            )
+
     def test_profile_to_dict(self):
         """Test converting profile to dictionary."""
         env_vars = {
