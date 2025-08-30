@@ -11,7 +11,8 @@ from ..exceptions import (
     ProfileExistsError,
     InvalidProfileError,
     SettingsFileError,
-    ConfigurationError
+    ConfigurationError,
+    ValidationError
 )
 from ..utils.validation import validate_environment_vars, validate_profile_name
 from .interface import (
@@ -20,7 +21,14 @@ from .interface import (
     create_profile_tui,
     edit_profile_tui,
     show_profile_details_tui,
-    confirm_action_tui
+    confirm_action_tui,
+    show_success_tui,
+    show_error_tui,
+    show_warning_tui,
+    show_info_tui,
+    show_empty_state,
+    loading_tui,
+    show_operation_result
 )
 
 
@@ -54,21 +62,23 @@ def cli(ctx, config, settings, verbose, quiet):
               default='table', help='Output format')
 @click.pass_context
 def list(ctx, format):
-    """List all environment profiles."""
+    """List all environment profiles with enhanced display."""
     manager = ctx.obj['manager']
     quiet = ctx.obj['quiet']
     verbose = ctx.obj['verbose']
     
     try:
+        loading_tui("Loading profiles")
         profiles = manager.list_profiles()
+        default_profile = manager.get_default_profile()
         
         if not profiles:
             if not quiet:
-                click.echo("No profiles found. Use 'create' to add a profile.")
+                show_empty_state("No profiles found", "Use 'create' to add your first profile.")
             return
         
         if format == 'table':
-            list_profiles_tui(profiles, verbose)
+            list_profiles_tui(profiles, verbose, default_profile)
         elif format == 'json':
             import json
             data = [p.to_dict() for p in profiles]
@@ -79,12 +89,15 @@ def list(ctx, format):
             click.echo(yaml.dump(data, default_flow_style=False))
     
     except Exception as e:
-        click.echo(f"Error listing profiles: {e}", err=True)
+        show_error_tui(f"Error listing profiles: {e}", "Check configuration file permissions and format.")
         sys.exit(1)
 
 
+# Removed duplicate ls command - users can use 'list' command
+
+
 @cli.command()
-@click.option('--name', '-n', required=True, help='Profile name')
+@click.option('--name', '-n', required=False, help='Profile name (required in non-interactive mode)')
 @click.option('--base-url', '-b', help='Anthropic base URL')
 @click.option('--api-key', '-k', help='Anthropic API key')
 @click.option('--model', '-m', help='Anthropic model')
@@ -98,24 +111,30 @@ def create(ctx, name, base_url, api_key, model, fast_model, description, interac
     quiet = ctx.obj['quiet']
     
     try:
-        # Validate profile name
-        validate_profile_name(name)
+        # In non-interactive mode, validate profile name
+        if not interactive and not name:
+            click.echo("Error: --name is required in non-interactive mode.", err=True)
+            sys.exit(1)
+        
+        if not interactive:
+            # Validate profile name for non-interactive mode
+            validate_profile_name(name)
         
         if interactive:
-            # Use TUI for interactive creation
+            # Use enhanced TUI for interactive creation
             profile = create_profile_tui()
             if profile:
+                loading_tui("Creating profile")
                 manager.create_profile(
                     profile.name,
                     profile.env,
                     profile.description
                 )
-                if not quiet:
-                    click.echo(f"✅ Profile '{profile.name}' created successfully.")
+                show_operation_result("Profile Creation", True, f"Profile '{profile.name}' created successfully.")
         else:
             # Check for required parameters
             if not all([base_url, api_key, model, fast_model]):
-                click.echo("Error: --base-url, --api-key, --model, and --fast-model are required in non-interactive mode.", err=True)
+                show_error_tui("Missing required parameters", "All of --base-url, --api-key, --model, and --fast-model are required in non-interactive mode.")
                 sys.exit(1)
             
             # Create environment variables dictionary
@@ -130,23 +149,23 @@ def create(ctx, name, base_url, api_key, model, fast_model, description, interac
             validate_environment_vars(env_vars)
             
             # Create profile
+            loading_tui("Creating profile")
             manager.create_profile(name, env_vars, description)
-            if not quiet:
-                click.echo(f"✅ Profile '{name}' created successfully.")
+            show_operation_result("Profile Creation", True, f"Profile '{name}' created successfully.")
     
     except ProfileExistsError as e:
-        click.echo(f"Error: {e}", err=True)
+        show_error_tui(f"Profile creation failed: {e}", "Use a different profile name or update existing profile.")
         sys.exit(1)
     except (ValidationError, ValueError) as e:
-        click.echo(f"Validation error: {e}", err=True)
+        show_error_tui(f"Validation error: {e}", "Check your input values and try again.")
         sys.exit(1)
     except Exception as e:
-        click.echo(f"Error creating profile: {e}", err=True)
+        show_error_tui(f"Error creating profile: {e}", "Please check the error details and try again.")
         sys.exit(1)
 
 
 @cli.command()
-@click.option('--name', '-n', required=True, help='Profile name')
+@click.option('--name', '-n', required=False, help='Profile name (required in non-interactive mode)')
 @click.option('--base-url', '-b', help='Anthropic base URL')
 @click.option('--api-key', '-k', help='Anthropic API key')
 @click.option('--model', '-m', help='Anthropic model')
@@ -160,6 +179,11 @@ def update(ctx, name, base_url, api_key, model, fast_model, description, interac
     quiet = ctx.obj['quiet']
     
     try:
+        # In non-interactive mode, validate profile name
+        if not interactive and not name:
+            click.echo("Error: --name is required in non-interactive mode.", err=True)
+            sys.exit(1)
+        
         if interactive:
             # Use TUI for interactive editing
             profile = edit_profile_tui(manager, name)
@@ -233,7 +257,7 @@ def delete(ctx, name, force):
 
 
 @cli.command()
-@click.option('--name', '-n', required=True, help='Profile name')
+@click.option('--name', '-n', required=False, help='Profile name (uses default if not specified)')
 @click.option('--force', '-f', is_flag=True, help='Force application without confirmation')
 @click.pass_context
 def apply(ctx, name, force):
@@ -252,23 +276,22 @@ def apply(ctx, name, force):
         # Confirm application unless forced
         if not force:
             if not confirm_action_tui(f"Apply profile '{name}' to Claude Code settings?"):
-                if not quiet:
-                    click.echo("Application cancelled.")
+                show_info_tui("Profile application cancelled.")
                 return
         
-        # Apply profile
+        # Apply profile with enhanced progress
+        loading_tui("Applying profile")
         if manager.apply_profile(name):
-            if not quiet:
-                click.echo(f"✅ Profile '{name}' applied successfully.")
+            show_operation_result("Profile Application", True, f"Profile '{name}' applied successfully to Claude Code settings.")
         else:
-            click.echo(f"Error: Failed to apply profile '{name}'.", err=True)
+            show_error_tui(f"Failed to apply profile '{name}'", "Check profile configuration and Claude Code settings permissions.")
             sys.exit(1)
     
     except SettingsFileError as e:
-        click.echo(f"Settings file error: {e}", err=True)
+        show_error_tui(f"Settings file error: {e}", "Check Claude Code installation and permissions.")
         sys.exit(1)
     except Exception as e:
-        click.echo(f"Error applying profile: {e}", err=True)
+        show_error_tui(f"Error applying profile: {e}", "Please check your configuration and try again.")
         sys.exit(1)
 
 

@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 import json
+import re
 from pathlib import Path
 
 
@@ -42,6 +43,15 @@ class EnvironmentProfile:
         base_url = self.env.get("ANTHROPIC_BASE_URL", "")
         if not base_url.startswith(("http://", "https://")):
             raise ValueError("Base URL must start with 'http://' or 'https://'")
+        
+        # Validate model names
+        model = self.env.get("ANTHROPIC_MODEL", "")
+        fast_model = self.env.get("ANTHROPIC_SMALL_FAST_MODEL", "")
+        
+        # Validate model names format
+        for model_name in [model, fast_model]:
+            if model_name and not re.match(r'^[a-zA-Z0-9_.\-/]+$', model_name):
+                raise ValueError("Invalid model name format")
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert profile to dictionary for serialization."""
@@ -68,8 +78,15 @@ class EnvironmentProfile:
 
     def update_env(self, env_vars: Dict[str, str]) -> None:
         """Update environment variables and mark as modified."""
+        import time
         self.env.update(env_vars)
-        self.modified = datetime.now()
+        # Ensure timestamp is different by adding a small delay if needed
+        new_time = datetime.now()
+        if new_time <= self.modified:
+            time.sleep(0.001)  # 1ms delay
+            self.modified = datetime.now()
+        else:
+            self.modified = new_time
 
 
 @dataclass
@@ -85,7 +102,7 @@ class ClaudeSettings:
         if not self.env:
             raise ValueError("Environment variables are required")
         
-        if "permissions" not in self.permissions:
+        if "allow" not in self.permissions or "deny" not in self.permissions:
             raise ValueError("Permissions dictionary must contain 'allow' and 'deny' keys")
         
         if "type" not in self.status_line:

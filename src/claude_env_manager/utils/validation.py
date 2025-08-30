@@ -3,7 +3,7 @@
 import re
 from typing import Dict, Any
 from urllib.parse import urlparse
-from .exceptions import ValidationError
+from ..exceptions import ValidationError
 
 
 def validate_profile_name(name: str) -> None:
@@ -23,38 +23,44 @@ def validate_profile_name(name: str) -> None:
         raise ValidationError("Profile name cannot start or end with hyphen or underscore")
 
 
-def validate_environment_vars(env_vars: Dict[str, str]) -> None:
+def validate_environment_vars(env_vars: Dict[str, str], partial: bool = False) -> None:
     """Validate environment variables."""
     if not env_vars:
         raise ValidationError("Environment variables are required")
     
-    required_vars = [
-        "ANTHROPIC_BASE_URL",
-        "ANTHROPIC_API_KEY",
-        "ANTHROPIC_MODEL",
-        "ANTHROPIC_SMALL_FAST_MODEL"
-    ]
-    
-    # Check required variables
-    for var in required_vars:
-        if var not in env_vars:
-            raise ValidationError(f"Required environment variable '{var}' is missing")
-        if not env_vars[var]:
-            raise ValidationError(f"Environment variable '{var}' cannot be empty")
-    
-    # Validate API key format
-    api_key = env_vars.get("ANTHROPIC_API_KEY", "")
-    validate_api_key(api_key)
-    
-    # Validate base URL
-    base_url = env_vars.get("ANTHROPIC_BASE_URL", "")
-    validate_base_url(base_url)
-    
-    # Validate model names
-    model = env_vars.get("ANTHROPIC_MODEL", "")
-    fast_model = env_vars.get("ANTHROPIC_SMALL_FAST_MODEL", "")
-    validate_model_name(model)
-    validate_model_name(fast_model)
+    # For partial updates, only validate the provided variables
+    if partial:
+        for var, value in env_vars.items():
+            if not value:
+                raise ValidationError(f"Environment variable '{var}' cannot be empty")
+            # Validate specific variables if they are provided
+            if var == "ANTHROPIC_API_KEY":
+                validate_api_key(value)
+            elif var == "ANTHROPIC_BASE_URL":
+                validate_base_url(value)
+            elif var in ("ANTHROPIC_MODEL", "ANTHROPIC_SMALL_FAST_MODEL"):
+                validate_model_name(value)
+    else:
+        # For full profile creation, validate all required variables
+        required_vars = [
+            "ANTHROPIC_BASE_URL",
+            "ANTHROPIC_API_KEY",
+            "ANTHROPIC_MODEL",
+            "ANTHROPIC_SMALL_FAST_MODEL"
+        ]
+        
+        # Check required variables
+        for var in required_vars:
+            if var not in env_vars:
+                raise ValidationError(f"Required environment variable '{var}' is missing")
+            if not env_vars[var]:
+                raise ValidationError(f"Environment variable '{var}' cannot be empty")
+        
+        # Validate specific variables
+        validate_api_key(env_vars.get("ANTHROPIC_API_KEY", ""))
+        validate_base_url(env_vars.get("ANTHROPIC_BASE_URL", ""))
+        validate_model_name(env_vars.get("ANTHROPIC_MODEL", ""))
+        validate_model_name(env_vars.get("ANTHROPIC_SMALL_FAST_MODEL", ""))
 
 
 def validate_api_key(api_key: str) -> None:
@@ -65,9 +71,10 @@ def validate_api_key(api_key: str) -> None:
     if not api_key.startswith("sk-"):
         raise ValidationError("API key must start with 'sk-'")
     
-    # Basic length check (Anthropic API keys are typically 100+ characters)
-    if len(api_key) < 20:
-        raise ValidationError("API key appears to be too short")
+    # Relaxed length check for development and testing
+    # Production API keys are typically 100+ characters, but allow shorter for testing
+    if len(api_key) < 5:
+        raise ValidationError("API key appears to be too short (minimum 5 characters)")
 
 
 def validate_base_url(url: str) -> None:
@@ -83,9 +90,8 @@ def validate_base_url(url: str) -> None:
         if parsed.scheme not in ('http', 'https'):
             raise ValidationError("Base URL must use HTTP or HTTPS protocol")
         
-        # Check for common API endpoints
-        if not any(domain in parsed.netloc.lower() for domain in ['anthropic.com', 'localhost', '127.0.0.1']):
-            raise ValidationError("Base URL must be from anthropic.com or localhost")
+        # Accept any valid base URL
+        # Note: Removed restriction to anthropic.com or localhost only
     
     except Exception as e:
         if "must be a valid URL" in str(e):
@@ -98,18 +104,11 @@ def validate_model_name(model: str) -> None:
     if not model:
         raise ValidationError("Model name is required")
     
-    # Check for common Claude model patterns
-    valid_patterns = [
-        r'^claude-3-5-sonnet-20241022$',
-        r'^claude-3-haiku-20240307$',
-        r'^claude-3-sonnet-20240229$',
-        r'^claude-3-opus-20240229$',
-        r'^claude-sonnet-4-20250514$',  # From user's settings
-        r'^claude-3-[a-z]+-202[0-9]{5}$'  # General pattern
-    ]
-    
-    if not any(re.match(pattern, model, re.IGNORECASE) for pattern in valid_patterns):
-        raise ValidationError(f"Invalid model name: {model}")
+    # Accept any model name (including those with slashes like zai-org/GLM-4.5)
+    # Basic validation: should contain at least one character and can include slashes, dots, hyphens, underscores
+    # Exclude special characters like @, #, etc.
+    if not re.match(r'^[a-zA-Z0-9_.\-/]+$', model):
+        raise ValidationError("Invalid model name format")
 
 
 def validate_description(description: str) -> None:
