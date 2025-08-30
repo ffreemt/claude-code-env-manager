@@ -47,9 +47,52 @@ pip install -r requirements.txt
    claude-env-manager apply development
    ```
 
-### Option 2: Using Python Module (Development/Testing)
+### Option 2: Using Python Scripts (Development/Testing)
 
-If you haven't installed the package or are working from source, you can run the application directly using Python's module syntax:
+If you haven't installed the package or are working from source, you can run the application directly using Python scripts:
+
+#### Preferred Method: Direct Entry Point
+
+The `ce.py` script is the recommended way to run the application in development/testing:
+
+1. **Show help**:
+   ```bash
+   python ce.py --help
+   ```
+
+2. **Initialize configuration**:
+   ```bash
+   python ce.py init
+   ```
+
+3. **Create a profile**:
+   ```bash
+   python ce.py create --interactive
+   ```
+
+4. **List profiles**:
+   ```bash
+   python ce.py list
+   ```
+
+5. **Apply a profile**:
+   ```bash
+   python ce.py apply development
+   ```
+
+6. **Show configuration**:
+   ```bash
+   python ce.py config
+   ```
+
+7. **View profile details**:
+   ```bash
+   python ce.py show development --format json
+   ```
+
+#### Alternative Method: Python Module
+
+You can also use Python's module syntax if needed:
 
 1. **Show help**:
    ```bash
@@ -71,22 +114,7 @@ If you haven't installed the package or are working from source, you can run the
    python -m src.claude_env_manager.main list
    ```
 
-5. **Apply a profile**:
-   ```bash
-   python -m src.claude_env_manager.main apply development
-   ```
-
-6. **Show configuration**:
-   ```bash
-   python -m src.claude_env_manager.main config
-   ```
-
-7. **View profile details**:
-   ```bash
-   python -m src.claude_env_manager.main show development --format json
-   ```
-
-**Note**: When using the Python module syntax, you need to run the command from the project root directory where the `src/` directory is located.
+**Note**: When using these development methods, you need to run the commands from the project root directory.
 
 ## Commands
 
@@ -168,33 +196,37 @@ claude-env-manager show development --format json
 claude-env-manager update development --api-key sk-ant-api03-new-key
 ```
 
-### Using Python Module (Development/Testing)
+### Using Python Scripts (Development/Testing)
 
-#### Show Help and Available Commands
+#### Preferred Method: Using ce.py
+
+The `ce.py` script is the preferred way to run the application in development/testing:
+
+##### Show Help and Available Commands
 ```bash
-python -m src.claude_env_manager.main --help
+python ce.py --help
 ```
 
-#### Initialize Configuration
+##### Initialize Configuration
 ```bash
-python -m src.claude_env_manager.main init
+python ce.py init
 ```
 
-#### Interactive Profile Creation
+##### Interactive Profile Creation
 ```bash
-python -m src.claude_env_manager.main create --interactive
+python ce.py create --interactive
 ```
 
-#### List Profiles in Different Formats
+##### List Profiles in Different Formats
 ```bash
-python -m src.claude_env_manager.main list --format table
-python -m src.claude_env_manager.main list --format json
-python -m src.claude_env_manager.main list --format yaml
+python ce.py list --format table
+python ce.py list --format json
+python ce.py list --format yaml
 ```
 
-#### Create Profile Non-interactively
+##### Create Profile Non-interactively
 ```bash
-python -m src.claude_env_manager.main create \
+python ce.py create \
   --name "development" \
   --base-url "https://api.anthropic.com" \
   --api-key "sk-ant-api03-your-key" \
@@ -203,47 +235,66 @@ python -m src.claude_env_manager.main create \
   --description "Development environment"
 ```
 
-#### Apply Profile with Force (Skip Confirmation)
+##### Apply Profile with Force (Skip Confirmation)
 ```bash
-python -m src.claude_env_manager.main apply development --force
+python ce.py apply development --force
 ```
 
-#### Show Profile Details
+##### Show Profile Details
 ```bash
-python -m src.claude_env_manager.main show development
-python -m src.claude_env_manager.main show development --format json
+python ce.py show development
+python ce.py show development --format json
 ```
 
-#### Update Profile
+##### Update Profile
 ```bash
-python -m src.claude_env_manager.main update development --api-key sk-ant-api03-new-key
+python ce.py update development --api-key sk-ant-api03-new-key
 ```
 
-#### Delete Profile with Force
+##### Delete Profile with Force
 ```bash
-python -m src.claude_env_manager.main delete old-profile --force
+python ce.py delete old-profile --force
 ```
 
-#### Set Default Profile
+##### Set Default Profile
 ```bash
-python -m src.claude_env_manager.main default development
+python ce.py default development
 ```
 
-#### Show Current Active Profile
+##### Show Current Active Profile
 ```bash
-python -m src.claude_env_manager.main current
+python ce.py current
 ```
 
-#### Show Configuration Information
+##### Show Configuration Information
 ```bash
-python -m src.claude_env_manager.main config
-python -m src.claude_env_manager.main config --verbose
+python ce.py config
+python ce.py config --verbose
 ```
 
-#### View Profile Interactively
+##### View Profile Interactively
 ```bash
-python -m src.claude_env_manager.main show
+python ce.py show
 # This will show an interactive profile selector
+```
+
+#### Alternative Method: Using Python Module
+
+You can also use Python's module syntax if needed:
+
+##### Show Help and Available Commands
+```bash
+python -m src.claude_env_manager.main --help
+```
+
+##### Initialize Configuration
+```bash
+python -m src.claude_env_manager.main init
+```
+
+##### List Profiles
+```bash
+python -m src.claude_env_manager.main list
 ```
 
 ## Environment Variables
