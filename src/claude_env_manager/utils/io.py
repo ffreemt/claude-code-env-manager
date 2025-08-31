@@ -3,13 +3,14 @@
 import shutil
 from pathlib import Path
 from typing import Optional
+
 from ..exceptions import FileOperationError
 
 
 def safe_read_file(file_path: Path) -> Optional[str]:
     """Safely read a file and return its contents."""
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             return f.read()
     except FileNotFoundError:
         return None
@@ -22,47 +23,47 @@ def safe_write_file(file_path: Path, content: str) -> None:
     try:
         # Create parent directory if it doesn't exist
         file_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         # Write to temporary file first
-        temp_file = file_path.with_suffix(file_path.suffix + '.tmp')
-        with open(temp_file, 'w', encoding='utf-8') as f:
+        temp_file = file_path.with_suffix(file_path.suffix + ".tmp")
+        with open(temp_file, "w", encoding="utf-8") as f:
             f.write(content)
-        
+
         # Replace the original file
         temp_file.replace(file_path)
-        
+
     except Exception as e:
         raise FileOperationError(f"Failed to write file {file_path}: {e}")
 
 
-def create_backup(file_path: Path, backup_suffix: str = '.backup') -> Path:
+def create_backup(file_path: Path, backup_suffix: str = ".backup") -> Path:
     """Create a backup of the specified file."""
     try:
         if not file_path.exists():
             return file_path
-        
+
         backup_path = file_path.with_suffix(file_path.suffix + backup_suffix)
         shutil.copy2(file_path, backup_path)
-        
+
         return backup_path
-    
+
     except Exception as e:
         raise FileOperationError(f"Failed to create backup for {file_path}: {e}")
 
 
-def restore_from_backup(file_path: Path, backup_suffix: str = '.backup') -> bool:
+def restore_from_backup(file_path: Path, backup_suffix: str = ".backup") -> bool:
     """Restore a file from backup."""
     try:
         backup_path = file_path.with_suffix(file_path.suffix + backup_suffix)
-        
+
         if not backup_path.exists():
             return False
-        
+
         shutil.copy2(backup_path, file_path)
         backup_path.unlink()  # Remove backup after restore
-        
+
         return True
-    
+
     except Exception as e:
         raise FileOperationError(f"Failed to restore backup for {file_path}: {e}")
 
